@@ -1,3 +1,5 @@
+using Taskly.Options;
+
 namespace Taskly.Extensions;
 
 public static class ApiExtensions
@@ -7,13 +9,32 @@ public static class ApiExtensions
         builder.Services.AddProblemDetails();
         builder.Services.AddOpenApi();
 
-        var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-
+        var cors = builder.Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>();
+        
         builder.Services.AddCors(options =>
-            options.AddDefaultPolicy(policy => policy
-                .WithOrigins(origins)
-                .AllowAnyHeader()
-                .AllowAnyMethod()));
+        {
+            options.AddDefaultPolicy(b =>
+            {
+                if (cors is null)
+                {
+                    return;
+                }
+                
+                b.WithOrigins(cors.Origins)
+                    .WithMethods(cors.Methods)
+                    .WithHeaders(cors.Headers)
+                    .WithExposedHeaders(cors.ExposedHeaders);
+
+                if (cors.AllowCredentials)
+                {
+                    b.AllowCredentials();
+                }
+                else
+                {
+                    b.DisallowCredentials();
+                }
+            });
+        });
     }
 
     public static void UseApiConfiguration(this WebApplication app)
